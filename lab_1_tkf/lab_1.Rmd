@@ -1,0 +1,85 @@
+---
+title: "ESM 244 lab 1"
+output: html_document
+---
+
+```{r setup, include=TRUE, warning = FALSE, message = FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+library(tidyverse)
+library(here)
+library(sf)
+library(tmap)
+```
+cmd-shift-enter shortcut for running the current code chunk
+cmd-enter shortcut for running the current line
+
+### read in data
+
+cmd-option-i shortcut for creating a code chunk
+```{r}
+sf_trees <- read_csv(here('data', 'sf_trees', 'sf_trees.csv'))
+```
+
+### Part 1: wrangling and ggplot review
+
+```{r}
+# method 1: group_by() %>% summarize()
+sf_trees %>% 
+  group_by(legal_status) %>% 
+  summarize(tree_count = n())
+
+# method 2
+top_5_status <- sf_trees %>% 
+  count(legal_status) %>% 
+  drop_na(legal_status) %>% 
+  rename(tree_count = n) %>% 
+  relocate(tree_count) %>% 
+  slice_max(tree_count, n = 5) %>% 
+  arrange(-tree_count)
+```
+
+Make a graph of the top 5 from above:
+
+```{r}
+ggplot(data = top_5_status, aes(x = fct_reorder(legal_status, tree_count), y = tree_count)) +
+  geom_col(fill = 'darkgreen') +
+  labs(x = 'legal status', y = 'Tree count') +
+  coord_flip() +
+  theme_minimal()
+```
+
+**Example 2:**Only going to keep observations where legal status is 'permitted site' and caretaker is 'MTA, and store as `permitted_data_df`
+
+shift-cmd-c to comment/uncomment quickly
+
+```{r}
+# sf_trees$legal_status %>% unique()
+# unique(sf_trees$legal_status)
+
+permitted_data_df <- sf_trees %>% 
+  filter(legal_status == "Permitted Site", caretaker == "MTA")
+```
+
+**Example 3:** Only keep blackwood acacia trees, and then only keep certain columns
+
+```{r}
+blackwood_acacia_df <- sf_trees %>% 
+  filter(str_detect(species, 'Blackwood Acacia')) %>% 
+  select(legal_status, date, lat = latitude, lon = longitude)
+
+### make a little graph of locations
+ggplot(data = blackwood_acacia_df, aes(x = lon, y = lat)) +
+  geom_point(color = 'darkgreen')
+```
+**Example 4:** use `tidyr::separate()`
+```{r}
+sf_trees_sep <- sf_trees %>% separate(species, into = c('spp_scientific', 'spp_common'), sep = ' :: ')
+```
+
+**Example 5:** use `tidyr::unite()`
+
+```{r}
+ex_5 <- sf_trees %>% 
+  unite('id_status', tree_id, legal_status, sep = "_COOL_")
+```
+
